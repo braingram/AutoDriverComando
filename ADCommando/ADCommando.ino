@@ -28,7 +28,7 @@ class AutoReel: public AutoDriver {
       {}
     void configure () {
  
-      //resetDev();
+      resetDev();
       configSyncPin(_bp, 0);
       configStepMode(ms);
       setMaxSpeed(max_speed);
@@ -37,7 +37,7 @@ class AutoReel: public AutoDriver {
       setAcc(acc);
       setDec(dec);
       setSlewRate(SR_530V_us);
-      setOCThreshold(OC_750mA);//OC_6000mA
+      setOCThreshold(OC_6000mA);//OC_750mA
       setPWMFreq(PWM_DIV_2, PWM_MUL_2);
       setOCShutdown(OC_SD_DISABLE);
       setVoltageComp(VS_COMP_DISABLE);
@@ -227,7 +227,7 @@ void is_moving(CommandProtocol* cmd){ //returns a bool if the board is moving
 void wait(CommandProtocol* cmd){ //holds until the board is done moving
   echo.send_message(com.get_bytes(), com.get_n_bytes());
   int board = cmd->get_arg<int>();
-  while(!boards[board].busyCheck());
+  while(boards[board].busyCheck());
 };//10
 
 void rot(CommandProtocol* cmd){ //rotates int dir int steps_per_sec
@@ -245,6 +245,7 @@ void rot(CommandProtocol* cmd){ //rotates int dir int steps_per_sec
   Serial.println(ex2);
   Serial.println(sps);
   Serial.println(boards[board].get_ms());
+  Serial.println(STEP_FS);
   boards[board].run(dir,sps);
 };//11
 
