@@ -21,13 +21,13 @@ class AutoDriverComando(object):
         self.com.register_protocol(0, self.text)
         self.com.register_protocol(1, self.cmd)
         self.text.receive_message = self.show
-        self.cmd.register_callback(0,self._in_waiting)
+        self.cmd.register_callback(0, self._in_waiting)
         self._status = None
 
     def show(self, bs):
         print("[echo]->%r" % bs)
 
-    def _in_waiting(self,cmd):
+    def _in_waiting(self, cmd):
         self._status = cmd.get_arg(bool)
 
     def configure(self):
@@ -124,9 +124,10 @@ class AutoDriverComando(object):
 
     def is_moving(self):
         """
-        checks if board is moving (only works to check if the board is in the move_steps command
+        checks if board is moving (only works to
+        check if the board is in the move_steps command
         """
-        self.cmd.send_command(9,(self.board_ind,))
+        self.cmd.send_command(9, (self.board_ind, ))
         time.sleep(.1)
         while self.con.inWaiting():
             self.com.handle_stream()
@@ -134,7 +135,7 @@ class AutoDriverComando(object):
         tries = 0
         while tries < 5 & self._status is None:
             tries += 1
-            self.cmd.send_command(9,(self.board_ind,))
+            self.cmd.send_command(9, (self.board_ind, ))
             time.sleep(.1)
         ret_val = self._status
         self._status = None
