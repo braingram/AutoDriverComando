@@ -25,9 +25,13 @@ class ADCommando(object):
         self.com.register_protocol(0, self.text)
         self.com.register_protocol(1, self.cmd)
         self.text.receive_message = self.show
-        
+        self.cmd.register_callback(0,self._in_waiting)
+        self._status = None
     def show(self, bs):
         print("[echo]->%r" % bs)
+
+    def _in_waiting(self,cmd):
+        self._status = cmd.get_arg(bool)
 
     def configure(self):
         """
@@ -123,12 +127,21 @@ class ADCommando(object):
         
     def is_moving(self):
         """
-        checks if board is moving
+        checks if board is moving (only works to check if the board is in the move_steps command
         """
         self.cmd.send_command(9,(self.board_ind,))
-        time.sleep(.5)
+        time.sleep(.1)
         while self.con.inWaiting():
             self.com.handle_stream()
+        time.sleep(.1)
+        tries = 0
+        while tries < 5 & self._status is None:
+            tries += 1
+            self.cmd.send_command(9,(self.board_ind,))
+            time.sleep(.1)
+        ret_val = self._status
+        self._status = None
+        return ret_val
         
     def wait(self):
         """
@@ -150,7 +163,7 @@ class ADCommando(object):
         self.cmd.send_command(11,(self.board_ind,dir,sps))
         time.sleep(.5)
         while self.con.inWaiting():
-            print(self.con.readline())
+            self.com.handle_stream()
         
     def move_steps(self,dir, steps):
         """

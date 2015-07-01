@@ -178,7 +178,6 @@ void rel(CommandProtocol* cmd){ //release
 void max_sp(CommandProtocol* cmd){ //set max speed
   echo.send_message(com.get_bytes(), com.get_n_bytes());
   int board = cmd->get_arg<int>();
-  int ex = cmd->get_arg<int>();
   int sp = cmd->get_arg<int>();
   boards[board].set_max_speed(sp);
 };//4
@@ -186,7 +185,6 @@ void max_sp(CommandProtocol* cmd){ //set max speed
 void set_accel(CommandProtocol* cmd){ //set acc/dec
   echo.send_message(com.get_bytes(), com.get_n_bytes());
   int board = cmd->get_arg<int>();
-  int ex = cmd->get_arg<int>();
   int ac = cmd->get_arg<int>();
   boards[board].set_acc(ac);
   boards[board].set_dec(ac);
@@ -195,7 +193,6 @@ void set_accel(CommandProtocol* cmd){ //set acc/dec
 void set_current(CommandProtocol* cmd){ //set k value [0-255]
   echo.send_message(com.get_bytes(), com.get_n_bytes());
   int board = cmd->get_arg<int>();
-  int ex = cmd->get_arg<int>();
   int new_k = cmd->get_arg<int>();
   boards[board].set_k(new_k);
 };//6
@@ -203,7 +200,6 @@ void set_current(CommandProtocol* cmd){ //set k value [0-255]
 void set_micro(CommandProtocol* cmd){ //set microstepping vals [0-7]
   echo.send_message(com.get_bytes(), com.get_n_bytes());
   int board = cmd->get_arg<int>();
-  int ex = cmd->get_arg<int>();
   int new_ms = cmd->get_arg<int>();
   boards[board].set_ms(new_ms);
 };//7
@@ -211,7 +207,6 @@ void set_micro(CommandProtocol* cmd){ //set microstepping vals [0-7]
 void low_speed(CommandProtocol* cmd){ //set low speed mode true or false
   echo.send_message(com.get_bytes(), com.get_n_bytes());
   int board = cmd->get_arg<int>();
-  int ex = cmd->get_arg<int>();
   bool is_on = cmd->get_arg<bool>();
   boards[board].set_low_speed(is_on);
   boards[board].configure();
@@ -220,7 +215,10 @@ void low_speed(CommandProtocol* cmd){ //set low speed mode true or false
 void is_moving(CommandProtocol* cmd){ //returns a bool if the board is moving
   echo.send_message(com.get_bytes(), com.get_n_bytes());
   int board = cmd->get_arg<int>();
-  bool is_moving = boards[board].busyCheck();
+  int is_moving = boards[board].busyCheck();
+  cmd->start_command(0);
+  cmd->add_arg(is_moving!=0);
+  cmd->finish_command();
   //echo.send_message(is_moving);
 };//9
 
@@ -231,30 +229,17 @@ void wait(CommandProtocol* cmd){ //holds until the board is done moving
 };//10
 
 void rot(CommandProtocol* cmd){ //rotates int dir int steps_per_sec
-  //echo.send_message(com.get_bytes(), com.get_n_bytes());
+  echo.send_message(com.get_bytes(), com.get_n_bytes());
   int board = cmd->get_arg<int>();
-  int ex = cmd->get_arg<int>();
   int dir = cmd->get_arg<int>();
-  int ex2 = cmd->get_arg<int>();
   int sps = cmd->get_arg<int>();
-  
-  
-  Serial.println(board);
-  Serial.println(ex);
-  Serial.println(dir);
-  Serial.println(ex2);
-  Serial.println(sps);
-  Serial.println(boards[board].get_ms());
-  Serial.println(STEP_FS);
   boards[board].run(dir,sps);
 };//11
 
 void move_steps(CommandProtocol* cmd){ //move int dir int num_steps
   echo.send_message(com.get_bytes(), com.get_n_bytes());
   int board = cmd->get_arg<int>();
-  int ex = cmd->get_arg<int>();
   int dir = cmd->get_arg<int>();
-  ex = cmd->get_arg<int>();
   int num_steps = cmd->get_arg<int>();
   boards[board].move(dir,num_steps);
 };//12
