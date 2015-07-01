@@ -135,28 +135,28 @@ class AutoDriverComando(object):
         while self.con.inWaiting():
             self.com.handle_stream()
 
-    def rotate(self, dir, sps):
+    def rotate(self, direction, sps):
         """
         rotates the motor in the direction of dir at sps steps per second
         """
-        if type(dir) != int:
-            dir = int(dir)
+        if type(direction) != int:
+            direction = int(direction)
         if type(sps) != int:
             sps = int(sps)
-        self.cmd.send_command(11, (self.board_ind, dir, sps))
+        self.cmd.send_command(11, (self.board_ind, direction, sps))
         time.sleep(.5)
         while self.con.inWaiting():
             print(self.con.readline())
 
-    def move_steps(self, dir, steps):
+    def move_steps(self, direction, steps):
         """
         moves number of steps in the direction specified
         """
-        if type(dir) != int:
-            dir = int(dir)
+        if type(direction) != int:
+            direction = int(direction)
         if type(steps) != int:
             steps = int(steps)
-        self.cmd.send_command(12, (self.board_ind, dir, steps))
+        self.cmd.send_command(12, (self.board_ind, direction, steps))
         time.sleep(.1)
         while self.con.inWaiting():
             self.com.handle_stream()
