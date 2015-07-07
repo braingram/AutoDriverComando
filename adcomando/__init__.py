@@ -7,7 +7,7 @@ import pycomando
 def show(bs):
     print("[echo]->%r" % bs)
 
-        
+
 def wait_response(func):
     """
     Decorator that waits for arduino to respond after the function is called
@@ -20,7 +20,7 @@ def wait_response(func):
     inner.__doc__ = func.__doc__
     return inner
 
-    
+
 class AutoDriverComando(object):
     def __init__(self, port='COM5', rate=9600, n_boards=1):
         self.con = serial.Serial(port, rate)
@@ -43,25 +43,27 @@ class AutoDriverComando(object):
 
     def show(self, bs):
         print("[echo]->%r" % bs)
-    
+
     def _wait_response(self):
         time.sleep(.1)
         while self.con.inWaiting():
             self.com.handle_stream()
         time.sleep(.1)
-    
+
     def _in_waiting(self, cmd):
         b_ind = cmd.get_arg(ctypes.c_int16).value
         self._status[b_ind] = cmd.get_arg(bool)
-    
+
     def _set_vars(self, cmd):
         """
-        gets the vital values from arduino: max_speed, acc, dec, k, ms, low_speed
+        gets the vital values from arduino:
+            max_speed, acc, dec, k, ms, low_speed
         """
         b_ind = cmd.get_arg(ctypes.c_int16).value
-        self._vars[b_ind] = [cmd.get_arg(ctypes.c_int16), cmd.get_arg(ctypes.c_int16).value,
-                      cmd.get_arg(ctypes.c_int16), cmd.get_arg(ctypes.c_int16).value,
-                      cmd.get_arg(ctypes.c_int16), cmd.get_arg(bool)]
+        self._vars[b_ind] = [
+            cmd.get_arg(ctypes.c_int16), cmd.get_arg(ctypes.c_int16).value,
+            cmd.get_arg(ctypes.c_int16), cmd.get_arg(ctypes.c_int16).value,
+            cmd.get_arg(ctypes.c_int16), cmd.get_arg(bool)]
 
     def configure(self, board_ind=0):
         """
@@ -148,7 +150,7 @@ class AutoDriverComando(object):
         ret_val = self._status[board_ind.value]
         self._status[board_ind.value] = None
         return ret_val
-        
+
     def current_settings(self, board_ind=0, verbose=True):
         """
         checks with the arduino and returns the current values
@@ -157,18 +159,20 @@ class AutoDriverComando(object):
         self.cmd.send_command(13, (board_ind, ))
         self._wait_response()
         tries = 0
-        while (tries<5) & (self._vars[board_ind.value] is None):
+        while (tries < 5) & (self._vars[board_ind.value] is None):
             tries += 1
             self.cmd.send_command(13, (board_ind, ))
             self._wait_response()
         ret_val = self._vars[board_ind.value]
         if (verbose) & (ret_val is not None):
-            print("Max Speed: {} \n Acceleration: {} \n Decelleration: {} \n"\
-                   "Current: {} \n MicroStepping: {} \n LowSpeed: {}".format(ret_val[0],
-                   ret_val[1],ret_val[2],ret_val[3],ret_val[4],ret_val[5]))
+            print(
+                "Max Speed: {} \n Acceleration: {} \n Decelleration: {} \n"
+                "Current: {} \n MicroStepping: {} \n LowSpeed: {}".format(
+                    ret_val[0], ret_val[1], ret_val[2],
+                    ret_val[3], ret_val[4], ret_val[5]))
         self._vars[board_ind.value] = None
         return ret_val
-        
+
     # def wait(self):
         # """
         # waits until the arduino is done with its current operation
