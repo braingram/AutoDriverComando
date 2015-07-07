@@ -1,6 +1,6 @@
 import time
 import serial
-
+import ctypes
 import pycomando
 
 
@@ -22,8 +22,7 @@ def wait_response(func):
 
     
 class AutoDriverComando(object):
-    def __init__(self, port='COM5', rate=9600, board_ind=0):
-        self.board_ind = ctypes.c_int16(board_ind)
+    def __init__(self, port='COM5', rate=9600, n_boards=1):
         self.con = serial.Serial(port, rate)
         time.sleep(1)
         self.con.setDTR(level=0)
@@ -35,114 +34,164 @@ class AutoDriverComando(object):
         self.com.register_protocol(1, self.cmd)
         self.text.receive_message = self.show
         self.cmd.register_callback(0, self._in_waiting)
-        self._status = None
+        self.cmd.register_callback(1, self._set_vars)
+        self._status = {}
+        self._vars = {}
+        for i in range(n_boards):
+            self._status[i] = None
+            self._vars[i] = None
 
     def show(self, bs):
         print("[echo]->%r" % bs)
-
+    
+    def _wait_response(self):
+        time.sleep(.1)
+        while self.con.inWaiting():
+            self.com.handle_stream()
+        time.sleep(.1)
+    
     def _in_waiting(self, cmd):
-        self._status = cmd.get_arg(bool)
+        b_ind = cmd.get_arg(ctypes.c_int16).value
+        self._status[b_ind] = cmd.get_arg(bool)
+    
+    def _set_vars(self, cmd):
+        """
+        gets the vital values from arduino: max_speed, acc, dec, k, ms, low_speed
+        """
+        b_ind = cmd.get_arg(ctypes.c_int16).value
+        self._vars[b_ind] = [cmd.get_arg(ctypes.c_int16), cmd.get_arg(ctypes.c_int16).value,
+                      cmd.get_arg(ctypes.c_int16), cmd.get_arg(ctypes.c_int16).value,
+                      cmd.get_arg(ctypes.c_int16), cmd.get_arg(bool)]
 
-    def configure(self):
+    def configure(self, board_ind=0):
         """
         reconfigures board with updated settings
         """
-        self.cmd.send_command(0, (self.board_ind, ))
+        board_ind = ctypes.c_int16(board_ind)
+        self.cmd.send_command(0, (board_ind, ))
 
-    def soft_stop(self):
+    def soft_stop(self, board_ind=0):
         """
         brings the motor to a soft stop
         """
-        self.cmd.send_command(1, (self.board_ind, ))
+        board_ind = ctypes.c_int16(board_ind)
+        self.cmd.send_command(1, (board_ind, ))
 
-    def hard_stop(self):
+    def hard_stop(self, board_ind=0):
         """
         brings the board to a hard stop
         """
-        self.cmd.send_command(2, (self.board_ind, ))
+        board_ind = ctypes.c_int16(board_ind)
+        self.cmd.send_command(2, (board_ind, ))
 
-    def release(self):
+    def release(self, board_ind=0):
         """
         releases the board
         """
-        self.cmd.send_command(3, (self.board_ind, ))
+        board_ind = ctypes.c_int16(board_ind)
+        self.cmd.send_command(3, (board_ind, ))
 
-    def set_max_speed(self, max_sp):
+    def set_max_speed(self, max_sp, board_ind=0):
         """
         sets the max speed to integer value specified
         """
+        board_ind = ctypes.c_int16(board_ind)
         max_sp = ctypes.c_int16(max_sp)
-        self.cmd.send_command(4, (self.board_ind, max_sp))
+        self.cmd.send_command(4, (board_ind, max_sp))
 
-    def set_accel(self, accel):
+    def set_accel(self, accel, board_ind=0):
         """
         sets accel and decell to value specified
         """
+        board_ind = ctypes.c_int16(board_ind)
         accel = ctypes.c_int16(accel)
-        self.cmd.send_command(5, (self.board_ind, accel))
+        self.cmd.send_command(5, (board_ind, accel))
 
-    def set_current(self, k_val):
+    def set_current(self, k_val, board_ind=0):
         """
         sets the k value (must be int between 0 and 255)
         """
+        board_ind = ctypes.c_int16(board_ind)
         k_val = ctypes.c_int16(k_val)
-        self.cmd.send_command(6, (self.board_ind, k_val))
+        self.cmd.send_command(6, (board_ind, k_val))
 
-    def set_microstepping(self, ms):
+    def set_microstepping(self, ms, board_ind=0):
         """
         sets the microstepping value int power
         i.e 7 = 2^7
         """
+        board_ind = ctypes.c_int16(board_ind)
         ms = ctypes.c_int16(ms)
-        self.cmd.send_command(7, (self.board_ind, ms))
+        self.cmd.send_command(7, (board_ind, ms))
 
-    def low_speed_mode(self, enabled):
+    def low_speed_mode(self, enabled, board_ind=0):
         """
         sets low speed mode to on or off
         """
+        board_ind = ctypes.c_int16(board_ind)
         enabled = bool(enabled)
-        self.cmd.send_command(8, (self.board_ind, enabled))
+        self.cmd.send_command(8, (board_ind, enabled))
 
-    def is_moving(self):
+    def is_moving(self, board_ind=0):
         """
         checks if board is moving (only works to
         check if the board is in the move_steps command
         """
-        self.cmd.send_command(9, (self.board_ind, ))
-        time.sleep(.1)
-        while self.con.inWaiting():
-            self.com.handle_stream()
-        time.sleep(.1)
+        board_ind = ctypes.c_int16(board_ind)
+        self.cmd.send_command(9, (board_ind, ))
+        self._wait_response()
         tries = 0
-        while tries < 5 & self._status is None:
+        while tries < 5 & self._status[board_ind.value] is None:
             tries += 1
-            self.cmd.send_command(9, (self.board_ind, ))
-            time.sleep(.1)
-        ret_val = self._status
-        self._status = None
+            self.cmd.send_command(9, (board_ind, ))
+            self._wait_response()
+        ret_val = self._status[board_ind.value]
+        self._status[board_ind.value] = None
         return ret_val
-
-    def wait(self):
+        
+    def current_settings(self, board_ind=0, verbose=True):
         """
-        waits until the arduino is done with its current operation
+        checks with the arduino and returns the current values
         """
-        self.cmd.send_command(10, (self.board_ind, ))
-        time.sleep(.5)
-        while self.con.inWaiting():
-            self.com.handle_stream()
+        board_ind = ctypes.c_int16(board_ind)
+        self.cmd.send_command(13, (board_ind, ))
+        self._wait_response()
+        tries = 0
+        while (tries<5) & (self._vars[board_ind.value] is None):
+            tries += 1
+            self.cmd.send_command(13, (board_ind, ))
+            self._wait_response()
+        ret_val = self._vars[board_ind.value]
+        if (verbose) & (ret_val is not None):
+            print("Max Speed: {} \n Acceleration: {} \n Decelleration: {} \n"\
+                   "Current: {} \n MicroStepping: {} \n LowSpeed: {}".format(ret_val[0],
+                   ret_val[1],ret_val[2],ret_val[3],ret_val[4],ret_val[5]))
+        self._vars[board_ind.value] = None
+        return ret_val
+        
+    # def wait(self):
+        # """
+        # waits until the arduino is done with its current operation
+        # """
+        # self.cmd.send_command(10, (self.board_ind, ))
+        # time.sleep(.5)
+        # while self.con.inWaiting():
+            # self.com.handle_stream()
 
-    def rotate(self, direction, sps):
+    def rotate(self, direction, sps, board_ind=0):
         """
         rotates the motor in the direction of dir at sps steps per second
         """
+        board_ind = ctypes.c_int16(board_ind)
         direction = ctypes.c_int16(direction)
         sps = ctypes.c_int16(sps)
-        self.cmd.send_command(11, (self.board_ind, direction, sps))
+        self.cmd.send_command(11, (board_ind, direction, sps))
 
-    def move_steps(self, direction, steps):
+    def move_steps(self, direction, steps, board_ind=0):
         """
         moves number of steps in the direction specified
         """
+        board_ind = ctypes.c_int16(board_ind)
         direction = ctypes.c_int16(direction)
         steps = ctypes.c_int16(steps)
-        self.cmd.send_command(12, (self.board_ind, direction, steps))
+        self.cmd.send_command(12, (board_ind, direction, steps))
